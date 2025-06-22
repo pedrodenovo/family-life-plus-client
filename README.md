@@ -15,5 +15,5 @@ Isso é um WebSocket client para o addon **Family Life+** para Minecraft Bedrock
 ```
   pkg upgrade && pkg install nodejs && pkg install git && pkg install unzip && git clone https://github.com/pedrodenovo/family-life-plus-client.git && cd family-life-plus-client && unzip family-life-client.zip -d ../ && cd .. && rm -rf family-life-plus-client && cd family-life-client && node client.js
 ```
-- Em um mundo de Minecraft com cheats ativados use o comando /connect localhost:3000
+- Em um mundo de Minecraft com cheats ativados use o comando `/connect localhost:3000`
 
