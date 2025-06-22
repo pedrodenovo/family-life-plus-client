@@ -29,7 +29,7 @@ Follow the guide for your operating system.
     ```bash
     pkg upgrade
     pkg install nodejs git -y
-    git clone [https://github.com/pedrodenovo/family-life-plus-client.git](https://github.com/pedrodenovo/family-life-plus-client.git)
+    git clone https://github.com/pedrodenovo/family-life-plus-client
     cd family-life-plus-client
     npm install
     ```
