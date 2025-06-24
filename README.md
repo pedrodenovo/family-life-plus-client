@@ -25,13 +25,9 @@ Follow the guide for your operating system.
 ### Android
 
 1.  Download and install **[Termux](https://f-droid.org/en/packages/com.termux/)** (use this official link from F-Droid).
-2.  Open Termux and run the following commands one by one:
+2.  Open Termux and run the following command:
     ```bash
-    pkg upgrade
-    pkg install nodejs git -y
-    git clone https://github.com/pedrodenovo/family-life-plus-client
-    cd family-life-plus-client
-    npm install
+    pkg upgrade && pkg install nodejs git -y && git clone https://github.com/pedrodenovo/family-life-plus-client && cd family-life-plus-client && npm install
     ```
 3.  To start the client in the future, just open Termux and run:
     ```bash
