@@ -1,8 +1,15 @@
 const WebSocket = require('ws');
 const uuid = require('uuid');
+const fs = require('fs').promises;
+const path = require('path');
+
+const USE_REMOTE_SERVER = true;
 
 // Endereço da sua API remota que irá processar a chamada para o Gemini
-const YOUR_REMOTE_API_URL = "https://api.pedro-denovo.site/family-life/NPCDialogResponse";
+const API_URL_VERSION = "V0.1";
+const DIALOG_REMOTE_API_URL = USE_REMOTE_SERVER? `https://api.pedro-denovo.site//family-life/NPCDialogResponse/${API_URL_VERSION}` : `http://localhost:8080/family-life/NPCDialogResponse/${API_URL_VERSION}`;
+const INTERACAT_REMOTE_API_URL =  USE_REMOTE_SERVER? `https://api.pedro-denovo.site//family-life/NPCInteractResponse/${API_URL_VERSION}` : `http://localhost:8080/family-life/NPCInteractResponse/${API_URL_VERSION}`;
+const HISTORY_FILE_PATH = path.join(__dirname, 'dialogue_history.json');
 
 // Objeto para armazenar partes de requisições que ainda não foram completadas
 const pendingRequests = {};
@@ -11,7 +18,7 @@ const pendingRequests = {};
 console.log(`
 ┌──────────────────────────────────┐
 │                                  │
-│      FAMILY LIFE+ CLIENT         │
+│       FAMILY LIFE+ CLIENT        │
 │                                  │
 └──────────────────────────────────┘
 
@@ -32,52 +39,128 @@ console.log(`
 `);
 const wss = new WebSocket.Server({ port: 3000 });
 
+async function loadHistory() {
+    try {
+        await fs.access(HISTORY_FILE_PATH);
+        const data = await fs.readFile(HISTORY_FILE_PATH, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        // Se o arquivo não existir ou estiver vazio/corrompido, retorna um objeto vazio.
+        return {};
+    }
+}
+
+// Função para salvar o histórico no arquivo JSON
+async function saveHistory(data) {
+    for (const dat in data) {
+        if (data[dat].length > 32) {
+            data[dat].splice(0, data[dat].length - 32)
+        }
+    }
+    await fs.writeFile(HISTORY_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+
 // Função assíncrona para processar a requisição completa
 async function processCompleteRequest(requestData, sendFunction) {
     try {
-        const { meta, history } = requestData;
+        const { meta } = requestData;
+
+        // CORRIGIDO: O conversationId deve ser criado a partir de 'meta', que já temos.
+        const conversationId = `${meta.NPCID}_${meta.PNAME}`;
+        const history = await loadHistory();
+        const previousMessages = history[conversationId] || [];
 
         // Combina as duas partes em um único corpo de requisição
         const fullRequestBody = {
             ...meta,
-            previousMessages: history.previousMessages
+            previousMessages: previousMessages
         };
 
-        const npcName = fullRequestBody.NPCName;
-        const playerName = fullRequestBody.PlayerName;
-        const playerLocation = fullRequestBody.playerLocation;
+        const NPCN = fullRequestBody.NPCN;
+        const PNAME = fullRequestBody.PNAME;
+        const RequestType = fullRequestBody.RT;
+        const PLT = fullRequestBody.PLT;
+        const _playerMessage = fullRequestBody.CUM;
 
-        console.log(`Dados completos recebidos para ${playerName}. Enviando para API remota...`);
+        console.log(`Dados completos recebidos para ${PNAME}. Enviando para API remota...`);
 
         // 1. Faz a chamada HTTP para a SUA API remota
-        const apiResponse = await fetch(YOUR_REMOTE_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fullRequestBody)
-        });
+        if (RequestType == "D") {
+            const apiResponse = await fetch(DIALOG_REMOTE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(fullRequestBody)
+            });
 
-        if (!apiResponse.ok) {
-            const errorBody = await apiResponse.text();
-            throw new Error(`Erro na API remota: ${apiResponse.statusText} - ${errorBody}`);
-        }
+            if (!apiResponse.ok) {
+                const errorBody = await apiResponse.text();
+                throw new Error(`Erro na API remota: ${apiResponse.statusText} - ${errorBody}`);
+            }
 
-        const remoteApiResult = await apiResponse.json();
+            const remoteApiResult = await apiResponse.json();
 
-        // 2. Processa a resposta recebida do seu servidor
-        if (remoteApiResult && remoteApiResult.NPCGenResponse) {
-            const npcResponseText = remoteApiResult.NPCGenResponse;
-            const escapedNpcResponseText = npcResponseText.replaceAll(/\\/g, '\\\\').replaceAll(/"/g, '\\"');
-            console.log(`Resposta recebida do servidor para ${npcName}: ${npcResponseText}`);
+            // 2. Processa a resposta recebida do seu servidor
+            if (remoteApiResult && remoteApiResult.NPCGenResponse) {
+                const npcResponseText = remoteApiResult.NPCGenResponse;
+                const escapedNpcResponseText = npcResponseText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                console.log(`Resposta recebida do servidor para ${NPCN}: ${npcResponseText}`);
 
-            // Envia a resposta de volta para o chat do Minecraft
-            sendFunction(`tellraw @p[name="${playerName}",${playerLocation}] {"rawtext":[{"text":"<${npcName}> ${escapedNpcResponseText}"}]}`);
+                // Envia a resposta de volta para o chat do Minecraft
+                sendFunction(`tellraw @p[name="${PNAME}",${PLT}] {"rawtext":[{"text":"<${NPCN}> ${escapedNpcResponseText}"}]}`);
 
-            let tag = "talkedTo" + playerName + npcResponseText;
-            sendFunction(`tag @e[type=minecraft:villager,c=1,name="${npcName}",${playerLocation}] add ${tag.replaceAll(/[^\p{L}\p{N} ]/gu, '').replaceAll(' ', '_')}`);
-            sendFunction(`event entity @e[type=minecraft:villager,c=1,name="${npcName}",${playerLocation}] sunrise:talk_to_player`);
-        } else {
-            console.log("A resposta do servidor remoto era inválida.");
-            sendFunction(`say Hmm, algo estranho aconteceu com minha mente.`);
+                // CORRIGIDO: Garante que o array de histórico exista antes de adicionar novas mensagens
+                if (!history[conversationId]) {
+                    history[conversationId] = [];
+                }
+                history[conversationId].push(`<${PNAME}> ${_playerMessage}`);
+                history[conversationId].push(`<${NPCN}> ${escapedNpcResponseText}`);
+                await saveHistory(history);
+
+                let tag = `NPCIChange.${remoteApiResult.NPCIChange}.${PNAME}`;
+                sendFunction(`tag @e[type=minecraft:villager,c=1,name="${NPCN}",${PLT}] add ${tag}`);
+                sendFunction(`event entity @e[type=minecraft:villager,c=1,name="${NPCN}",${PLT}] sunrise:talk_to_player`);
+            } else {
+                console.log("A resposta do servidor remoto era inválida.");
+                sendFunction(`say Hmm, algo estranho aconteceu com minha mente.`);
+            }
+        }else if (RequestType == "I" || RequestType == "G"){
+            const apiResponse = await fetch(INTERACAT_REMOTE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(fullRequestBody)
+            });
+
+            if (!apiResponse.ok) {
+                const errorBody = await apiResponse.text();
+                throw new Error(`Erro na API remota: ${apiResponse.statusText} - ${errorBody}`);
+            }
+
+            const remoteApiResult = await apiResponse.json();
+
+            // 2. Processa a resposta recebida do seu servidor
+            if (remoteApiResult && remoteApiResult.NPCGenResponse) {
+                const npcResponseText = remoteApiResult.NPCGenResponse;
+                const escapedNpcResponseText = npcResponseText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                console.log(`Resposta recebida do servidor para ${NPCN}: ${npcResponseText}`);
+
+                // Envia a resposta de volta para o chat do Minecraft
+                sendFunction(`tellraw @p[name="${PNAME}",${PLT}] {"rawtext":[{"text":"<${NPCN}> ${escapedNpcResponseText}"}]}`);
+
+                // CORRIGIDO: Garante que o array de histórico exista antes de adicionar novas mensagens
+                if (!history[conversationId]) {
+                    history[conversationId] = [];
+                }
+                history[conversationId].push(`${_playerMessage}`);
+                history[conversationId].push(`${NPCN} repondeu a interação > ${escapedNpcResponseText}`);
+                await saveHistory(history);
+
+                let tag = `NPCIChange.${remoteApiResult.NPCIChange}.${PNAME}`;
+                sendFunction(`tag @e[type=minecraft:villager,c=1,name="${NPCN}",${PLT}] add ${tag}`);
+                sendFunction(`event entity @e[type=minecraft:villager,c=1,name="${NPCN}",${PLT}] sunrise:talk_to_player`);
+            } else {
+                console.log("A resposta do servidor remoto era inválida.");
+                sendFunction(`say Hmm, algo estranho aconteceu com minha mente.`);
+            }
         }
 
     } catch (error) {
@@ -111,36 +194,34 @@ wss.on('connection', socket => {
         const msg = JSON.parse(packet);
 
         // Se for uma mensagem com o gatilho da API (title ou actionbar)
-        if (msg.header.eventName === 'PlayerMessage' && msg.body.message.startsWith('{"familyLifeRequestVersion":"2.0.0"')) {
+        if (msg.header.eventName === 'PlayerMessage' && msg.body.message.startsWith('{"FLRV":"2.0.0"')) {
             try {
                 const dataPart = JSON.parse(msg.body.message);
                 const { requestId, type, requestBody } = dataPart;
 
                 // Se não for uma requisição válida, ignora
                 if (!requestId || !type || !requestBody) return;
-                
+
                 // Se for a primeira parte da requisição, cria a entrada
                 if (!pendingRequests[requestId]) {
                     pendingRequests[requestId] = {};
-                    // Define um timeout para limpar a requisição se ela não se completar em 5s
+                    // Define um timeout para limpar a requisição se ela não se completar em 10s
                     setTimeout(() => {
-                        if (pendingRequests[requestId] && (!pendingRequests[requestId].meta || !pendingRequests[requestId].history)) {
+                        if (pendingRequests[requestId]) {
                             console.log(`Requisição ${requestId} expirou e foi removida.`);
                             delete pendingRequests[requestId];
                         }
                     }, 10000);
                 }
-                
-                // Armazena a parte correspondente (meta ou history)
+
+                // Armazena a parte correspondente (meta)
                 if (type === "meta") {
                     pendingRequests[requestId].meta = requestBody;
-                } else if (type === "history") {
-                    pendingRequests[requestId].history = requestBody;
                 }
 
-                // Verifica se ambas as partes já foram recebidas
-                if (pendingRequests[requestId].meta && pendingRequests[requestId].history) {
-                    // Se a requisição está completa, processa
+                // Verifica se a parte 'meta' já foi recebida
+                if (pendingRequests[requestId].meta) {
+                    // Se a requisição está "completa" (tem o meta), processa
                     await processCompleteRequest(pendingRequests[requestId], send);
                     // Limpa a requisição da memória
                     delete pendingRequests[requestId];
