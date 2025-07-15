@@ -1,6 +1,6 @@
 # Family Life+ Client
 
-[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg)](https://discord.com/invite/HAS99pEwJ4) [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/social/youtube-singular_vector.svg)](https://m.youtube.com/channel/UCrq1E1rJEaYDXeU1qXk9OaQ) [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/social/twitter-singular_vector.svg)](https://x.com/sunrise_studioo)
+<div align="center"\>[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg)](https://discord.com/invite/HAS99pEwJ4) [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/social/youtube-singular_vector.svg)](https://m.youtube.com/channel/UCrq1E1rJEaYDXeU1qXk9OaQ) [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/social/twitter-singular_vector.svg)](https://x.com/sunrise_studioo)</div>
 
 ## About The Project
 
@@ -35,12 +35,23 @@ Follow the guide for your operating system.
     ```
 
 ## How to Use
-
-1.  Start the client on your PC or Termux.
-2.  Open Minecraft and enter your world (with cheats enabled).
-3.  Type the following command in the chat:
+1.  Install the client by following the instructions for [PC](https://www.google.com/search?q=%23windows) or [Android/Termux](https://www.google.com/search?q=%23android).
+2.  Start the client on your device.
+      * On **Windows**, run the `start.bat` file.
+      * On **Termux**, type and run `cd family-life-plus-client || node index.js`.
+3.  Choose a user option. Use the arrow keys and press Enter, or type the number of the option:
+      * **Free / Patreon:**
+        1.  A link will appear. Open it in your browser.
+        2.  Go through the link shortener or log in with Patreon.
+        3.  When a green success message appears, you can continue to step 4.
+      * **Custom Key:**
+        1.  Enter your Gemini API key from [aistudio.google.com](https://aistudio.google.com/) and press Enter.
+        2.  Continue to step 4.
+4.  Open Minecraft and enter your world (with cheats and the Family Life+ addon enabled).
+5.  Type the following command in the chat:
     ```
     /connect localhost:3000
     ```
+6.  That's it\! Enjoy the addon.
 
 > **Important:** Only the **world's host** needs to have the client installed and run the `/connect` command. Other players don't need to do anything.

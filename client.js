@@ -56,23 +56,24 @@ function displayHeader() {
 │                                  │
 └──────────────────────────────────┘
 
-  ► Connect: In Minecraft chat, type
+ ► Connect: In Minecraft chat, type
 
-    /connect localhost:3000
+   /connect localhost:3000
 
-    
-  ► Support the project!
-    Patreon:    https://patreon.com/Sunrise483
-    Discord:    https://discord.gg/HAS99pEwJ4
-    Github:     https://github.com/pedrodenovo/family-life-plus-client
-    Curseforge: https://www.curseforge.com/members/pedro_dnovo/projects
+   
+ ► Support the project!
+   Patreon:    https://patreon.com/Sunrise483
+   Discord:    https://discord.gg/HAS99pEwJ4
+   Github:     https://github.com/pedrodenovo/family-life-plus-client
+   Curseforge: https://www.curseforge.com/members/pedro_dnovo/projects
 `);
 }
 
-function promptUserType() {
+// --- MODIFICAÇÃO: A função agora aceita a config para exibir o status atual ---
+function promptUserType(config) {
     return new Promise(resolve => {
         let selectedOption = 0;
-        const options = [
+        const baseOptions = [
             "Free User: Renew a ticket every 30 minutes.",
             "Patreon Subscriber: Log in for unlimited access.",
             "Custom Key: Use your own Gemini API key."
@@ -82,6 +83,19 @@ function promptUserType() {
             clearConsole();
             displayHeader();
             console.log("  ► Choose your account type (use arrow keys or numbers 1-3, then press Enter):\n");
+
+            const options = [...baseOptions];
+            // Adiciona um marcador se a opção já estiver configurada
+            if (config.userType === 'free' && config.ticket && Date.now() < config.ticketExpiresAt) {
+                options[0] += " (Configurado)";
+            }
+            if (config.userType === 'patreon' && config.patreonCode) {
+                options[1] += " (Configurado)";
+            }
+            if (config.userType === 'custom' && config.customGeminiKey) {
+                options[2] += " (Configurado)";
+            }
+
             options.forEach((option, index) => {
                 if (index === selectedOption) {
                     console.log(`    > ${index + 1} - ${option}`);
@@ -98,9 +112,9 @@ function promptUserType() {
 
         const onKeyPress = (str, key) => {
             if (key.name === 'up') {
-                selectedOption = (selectedOption - 1 + options.length) % options.length;
+                selectedOption = (selectedOption - 1 + baseOptions.length) % baseOptions.length;
             } else if (key.name === 'down') {
-                selectedOption = (selectedOption + 1) % options.length;
+                selectedOption = (selectedOption + 1) % baseOptions.length;
             } else if (key.name >= '1' && key.name <= '3') {
                 selectedOption = parseInt(key.name, 10) - 1;
             } else if (key.name === 'return') {
@@ -172,7 +186,19 @@ async function validateGeminiKey(key) {
     }
 }
 
+// --- MODIFICAÇÃO: Verifica se já existe um ticket válido ---
 async function handleFreeUser() {
+    userConfig.userType = 'free';
+    delete userConfig.patreonCode;
+    delete userConfig.customGeminiKey;
+    
+    if (userConfig.ticket && Date.now() < userConfig.ticketExpiresAt) {
+        console.log("\n  ► Ticket ativo encontrado. Conectando...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await saveConfig(userConfig);
+        return;
+    }
+
     console.log(`\n  ► To generate your free ticket, open the link below in your browser:`);
     console.log(`  ► ${FREE_TICKET_URL}`);
 
@@ -180,7 +206,6 @@ async function handleFreeUser() {
 
     console.log("  ► Ticket received successfully!");
     
-    userConfig.userType = 'free';
     userConfig.ticket = ticket;
     userConfig.ticketExpiresAt = Date.now() + 30 * 60 * 1000;
     await saveConfig(userConfig);
@@ -189,9 +214,13 @@ async function handleFreeUser() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 }
 
+// --- MODIFICAÇÃO: Limpa outras configurações se o usuário mudar para Patreon ---
 async function handlePatreonUser() {
     userConfig.userType = 'patreon';
-    
+    delete userConfig.ticket;
+    delete userConfig.ticketExpiresAt;
+    delete userConfig.customGeminiKey;
+
     if (userConfig.patreonCode) {
         console.log("\n  ► Patreon code found. Verifying validity...");
         const isCodeValid = true; // Placeholder. Real validation is on the server.
@@ -200,6 +229,7 @@ async function handlePatreonUser() {
             delete userConfig.patreonCode;
         } else {
             console.log("  ► Code is valid! Welcome back!");
+            await saveConfig(userConfig); // Salva para garantir que o userType está correto
             await new Promise(resolve => setTimeout(resolve, 2000));
             return;
         }
@@ -217,8 +247,13 @@ async function handlePatreonUser() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 }
 
+// --- MODIFICAÇÃO: Limpa outras configurações se o usuário mudar para Chave Custom ---
 async function handleCustomKeyUser() {
     userConfig.userType = 'custom';
+    delete userConfig.ticket;
+    delete userConfig.ticketExpiresAt;
+    delete userConfig.patreonCode;
+
     while (true) {
         if (!userConfig.customGeminiKey) {
             const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -415,17 +450,19 @@ function startWebSocketServer() {
 
 // --- APPLICATION ENTRY POINT ---
 
+// --- MODIFICAÇÃO: A função agora sempre pergunta o tipo de usuário ---
 async function main() {
     clearConsole();
     displayHeader();
 
     userConfig = await loadConfig();
-    let chosenType = userConfig.userType;
 
-    if (!chosenType) {
-        chosenType = await promptUserType();
-    }
+    // Sempre pergunta ao usuário qual modo ele quer usar
+    const chosenType = await promptUserType(userConfig);
     
+    // Atualiza o tipo de usuário na configuração, caso tenha mudado
+    userConfig.userType = chosenType;
+
     switch (chosenType) {
         case 'free':
             await handleFreeUser();
