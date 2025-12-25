@@ -1,18 +1,20 @@
 {
-  "name": "family-life-plus",
+  "name": "flclient",
   "version": "1.0.0",
-  "description": "Just more a one",
-  "main": "client.js",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node client.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "@pedro_denovo",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
+  "description": "",
   "dependencies": {
-    "fs": "^0.0.1-security",
-    "path": "^0.12.7",
-    "uuid": "^11.1.0",
-    "ws": "^8.18.2"
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "node-machine-id": "^1.1.12",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
   }
 }

@@ -31,7 +31,7 @@ Follow the guide for your operating system.
     ```
 3.  To start the client in the future, just open Termux and run:
     ```bash
-    cd family-life-plus-client || node index.js
+    cd family-life-plus-client || node app.js
     ```
 
 ## How to Use
