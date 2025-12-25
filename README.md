@@ -44,9 +44,6 @@ Follow the guide for your operating system.
         1.  A link will appear. Open it in your browser.
         2.  Go through the link shortener or log in with Patreon.
         3.  When a green success message appears, you can continue to step 4.
-      * **Custom Key:**
-        1.  Enter your Gemini API key from [aistudio.google.com](https://aistudio.google.com/) and press Enter.
-        2.  Continue to step 4.
 4.  Open Minecraft and enter your world (with cheats and the Family Life+ addon enabled).
 5.  Type the following command in the chat:
     ```
