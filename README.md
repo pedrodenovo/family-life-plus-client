@@ -38,7 +38,7 @@ Follow the guide for your operating system.
 1.  Install the client by following the instructions for [PC](https://www.google.com/search?q=%23windows) or [Android/Termux](https://www.google.com/search?q=%23android).
 2.  Start the client on your device.
       * On **Windows**, run the `start.bat` file.
-      * On **Termux**, type and run `cd family-life-plus-client || node index.js`.
+      * On **Termux**, type and run `cd family-life-plus-client || node app.js`.
 3.  Choose a user option. Use the arrow keys and press Enter, or type the number of the option:
       * **Free / Patreon:**
         1.  A link will appear. Open it in your browser.
