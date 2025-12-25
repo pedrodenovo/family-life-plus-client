@@ -40,10 +40,14 @@ Follow the guide for your operating system.
       * On **Windows**, run the `start.bat` file.
       * On **Termux**, type and run `cd family-life-plus-client || node app.js`.
 3.  Choose a user option. Use the arrow keys and press Enter, or type the number of the option:
-      * **Free / Patreon:**
-        1.  A link will appear. Open it in your browser.
-        2.  Go through the link shortener or log in with Patreon.
-        3.  When a green success message appears, you can continue to step 4.
+    1.  **Copy and open the link** in your browser.
+    2.  **Log in** with your Patreon account.
+    3.  Wait for the **green success message** in your browser before returning to the console.
+       
+    > ⚠️ **Requirement:** To use the system for free, **following our Patreon page is mandatory**.
+
+    > 💎 **Why become a Patron?**
+    > While the free version works great, our Patrons unlock premium AI models that are **at least 5x smarter**. They offer deeper reasoning, better memory retention, and more complex interactions compared to the free model.
 4.  Open Minecraft and enter your world (with cheats and the Family Life+ addon enabled).
 5.  Type the following command in the chat:
     ```
