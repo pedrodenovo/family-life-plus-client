@@ -39,7 +39,8 @@ Follow the guide for your operating system.
 2.  Start the client on your device.
       * On **Windows**, run the `start.bat` file.
       * On **Termux**, type and run `cd family-life-plus-client || node app.js`.
-3.  Login & Authentication: when you start the server for the first time, a verification link will appear in your console.
+3.  Login & Authentication: 
+    * When you start the client for the first time, a verification link will appear in your console.
     * **Copy and open the link** in your browser.
     * **Log in** with your Patreon account.
     * Wait for the **green success message** in your browser before returning to the console.
