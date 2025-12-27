@@ -1,57 +1,68 @@
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./minecraft_ai.db');
+const fs = require('fs').promises;
+const path = require('path');
 
-// Inicializa as tabelas
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS dialogues (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        unicId TEXT,
-        content TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+const DB_PATH = path.join(__dirname, 'minecraft_ai.json');
 
-    db.run(`CREATE TABLE IF NOT EXISTS memories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        unicId TEXT,
-        content TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-});
+// Estrutura inicial do banco
+const initialData = {
+    dialogues: [],
+    memories: [],
+    // Contadores para simular o AUTOINCREMENT do SQL
+    meta: { lastDialogueId: 0, lastMemoryId: 0 }
+};
 
-// Helper para encapsular queries em Promises
-function runQuery(query, params = []) {
-    return new Promise((resolve, reject) => {
-        db.run(query, params, function(err) {
-            if (err) reject(err);
-            else resolve(this);
-        });
-    });
+// Helper: Lê o "banco" (JSON)
+async function loadDB() {
+    try {
+        const data = await fs.readFile(DB_PATH, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            await saveDB(initialData);
+            return JSON.parse(JSON.stringify(initialData));
+        }
+        throw err;
+    }
 }
 
-function getQuery(query, params = []) {
-    return new Promise((resolve, reject) => {
-        db.all(query, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
+// Helper: Salva o "banco"
+async function saveDB(data) {
+    await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
 }
 
 // --- DIÁLOGOS (FALAS) ---
 
 async function addDialogue(unicId, content) {
     try {
-        // 1. Adiciona a nova fala
-        await runQuery(`INSERT INTO dialogues (unicId, content) VALUES (?, ?)`, [unicId, content]);
-
-        // 2. Limpeza inteligente: Mantém apenas as 10 mais recentes para este ID
-        await runQuery(`
-            DELETE FROM dialogues 
-            WHERE unicId = ? AND id NOT IN (
-                SELECT id FROM dialogues WHERE unicId = ? ORDER BY id DESC LIMIT 10
-            )
-        `, [unicId, unicId]);
+        const db = await loadDB();
         
+        // 1. Simula INSERT
+        const newEntry = {
+            id: ++db.meta.lastDialogueId,
+            unicId,
+            content,
+            timestamp: new Date().toISOString()
+        };
+        db.dialogues.push(newEntry);
+
+        // 2. Simula DELETE ... NOT IN (LIMIT 10)
+        // Filtra os diálogos desse usuário específico
+        const userDialogues = db.dialogues.filter(d => d.unicId === unicId);
+        
+        // Se houver mais de 10, pegamos os IDs dos mais antigos para remover
+        if (userDialogues.length > 10) {
+            // Ordena decrescente pelo ID e pega os 10 primeiros (os mais novos)
+            const keepIds = userDialogues
+                .sort((a, b) => b.id - a.id)
+                .slice(0, 10)
+                .map(d => d.id);
+
+            // Mantém no banco apenas: (Outros usuários) OU (Ids que estão na lista de manter)
+            db.dialogues = db.dialogues.filter(d => d.unicId !== unicId || keepIds.includes(d.id));
+        }
+
+        await saveDB(db);
+
     } catch (err) {
         console.error("Erro ao salvar diálogo:", err);
     }
@@ -59,9 +70,13 @@ async function addDialogue(unicId, content) {
 
 async function getDialogues(unicId) {
     try {
-        // Pegamos em ordem ascendente (antigo -> novo) para a IA entender o contexto cronológico
-        const rows = await getQuery(`SELECT content FROM dialogues WHERE unicId = ? ORDER BY id ASC`, [unicId]);
+        const db = await loadDB();
         
+        // Filtra pelo ID e Ordena Ascendente (antigo -> novo)
+        const rows = db.dialogues
+            .filter(d => d.unicId === unicId)
+            .sort((a, b) => a.id - b.id);
+
         if (rows.length === 0) {
             return "-- Essa é a primeira interação de vocês --";
         }
@@ -77,15 +92,29 @@ async function getDialogues(unicId) {
 
 async function addMemory(unicId, content) {
     try {
-        await runQuery(`INSERT INTO memories (unicId, content) VALUES (?, ?)`, [unicId, content]);
+        const db = await loadDB();
 
-        // Limpeza: Mantém apenas as 100 últimas
-        await runQuery(`
-            DELETE FROM memories 
-            WHERE unicId = ? AND id NOT IN (
-                SELECT id FROM memories WHERE unicId = ? ORDER BY id DESC LIMIT 100
-            )
-        `, [unicId, unicId]);
+        const newEntry = {
+            id: ++db.meta.lastMemoryId,
+            unicId,
+            content,
+            timestamp: new Date().toISOString()
+        };
+        db.memories.push(newEntry);
+
+        // Limpeza: Mantém apenas as 100 últimas para este unicId
+        const userMemories = db.memories.filter(m => m.unicId === unicId);
+
+        if (userMemories.length > 100) {
+            const keepIds = userMemories
+                .sort((a, b) => b.id - a.id)
+                .slice(0, 100)
+                .map(m => m.id);
+
+            db.memories = db.memories.filter(m => m.unicId !== unicId || keepIds.includes(m.id));
+        }
+
+        await saveDB(db);
 
     } catch (err) {
         console.error("Erro ao salvar memória:", err);
@@ -94,8 +123,12 @@ async function addMemory(unicId, content) {
 
 async function getMemories(unicId) {
     try {
-        const rows = await getQuery(`SELECT content FROM memories WHERE unicId = ? ORDER BY id ASC`, [unicId]);
-        
+        const db = await loadDB();
+
+        const rows = db.memories
+            .filter(m => m.unicId === unicId)
+            .sort((a, b) => a.id - b.id);
+
         if (rows.length === 0) {
             return "-- Sem memórias registradas --";
         }
