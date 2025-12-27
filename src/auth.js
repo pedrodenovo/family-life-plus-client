@@ -1,8 +1,34 @@
 const axios = require('axios');
 const { machineId } = require('node-machine-id');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
 
 // Variable to store the token in memory
 let authToken = null;
+
+function getDeviceId() {
+    // Salva na Home do usuário, fora da pasta do projeto
+    // Assim, se você atualizar o bot (apagar a pasta do projeto), o ID continua o mesmo!
+    const filePath = path.join(os.homedir(), '.minecraft_ai_id');
+
+    try {
+        if (fs.existsSync(filePath)) {
+            return fs.readFileSync(filePath, 'utf8').trim();
+        }
+
+        // Gera um ID único aleatório (tipo UUID)
+        const newId = crypto.randomBytes(16).toString('hex');
+        
+        fs.writeFileSync(filePath, newId);
+        return newId;
+
+    } catch (err) {
+        console.error('Erro ao gerar ID:', err);
+        return 'device-unknown-' + Date.now(); // Fallback de emergência
+    }
+}
 
 // API Instance creation
 const api = axios.create({
@@ -21,7 +47,7 @@ api.interceptors.request.use(config => {
 async function login() {
     try {
         // Get unique Device ID
-        const deviceId = await machineId();
+        const deviceId = getDeviceId();
         console.log(`🔄 Checking authentication for Device ID: ${deviceId}...`);
 
         const response = await api.post('/auth/device', {
@@ -64,4 +90,5 @@ async function login() {
 }
 
 // Export the instance and the function
+
 module.exports = { api, login };
