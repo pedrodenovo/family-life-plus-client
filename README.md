@@ -31,14 +31,14 @@ Follow the guide for your operating system.
     ```
 3.  To start the client in the future, just open Termux and run:
     ```bash
-    cd family-life-plus-client && node app.js
+    cd family-life-plus-client || node app.js
     ```
 
 ## How to Use
 1.  Install the client by following the instructions for [PC](https://www.google.com/search?q=%23windows) or [Android/Termux](https://www.google.com/search?q=%23android).
 2.  Start the client on your device.
       * On **Windows**, run the `start.bat` file.
-      * On **Termux**, type and run `cd family-life-plus-client && node app.js`.
+      * On **Termux**, type and run `cd family-life-plus-client || node app.js`.
 3.  Login & Authentication: 
     * When you start the client for the first time, a verification link will appear in your console.
     * **Copy and open the link** in your browser.
